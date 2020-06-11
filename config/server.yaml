@@ -6,4 +6,4 @@ spec:
   template:
     spec:
       containers:
-      - image: {{image:latest}}
+      - image: gcr.io/snichols-vmw/colorz:latest

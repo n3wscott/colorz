@@ -1,0 +1,113 @@
+# install triggers: kubectl apply --filename https://storage.googleapis.com/tekton-releases/triggers/latest/release.yaml
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: colorz-trigger-sa
+
+---
+
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: tekton-triggers-minimal
+rules:
+# Permissions for every EventListener deployment to function
+- apiGroups: ["triggers.tekton.dev"]
+  resources: ["eventlisteners", "triggerbindings", "triggertemplates"]
+  verbs: ["get"]
+- apiGroups: [""]
+  # secrets are only needed for Github/Gitlab interceptors, serviceaccounts only for per trigger authorization
+  resources: ["configmaps", "secrets", "serviceaccounts"]
+  verbs: ["get", "list", "watch"]
+# Permissions to create resources in associated TriggerTemplates
+- apiGroups: ["tekton.dev"]
+  resources: ["pipelineruns", "pipelineresources", "taskruns"]
+  verbs: ["create"]
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: colorz-trigger-binding
+subjects:
+- kind: ServiceAccount
+  name: colorz-trigger-sa
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: tekton-triggers-minimal
+
+---
+
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerTemplate
+metadata:
+  name: colorz-template
+spec:
+  params:
+  - name: gitrepositoryurl
+    description: The git repository url
+  - name: gitrevision
+    description: The git revsion to checkout and build, a branch or sha, default to master
+    default: master
+  - name: registryimageurl
+    description: The registry url built images target
+  resourcetemplates:
+  - apiVersion: tekton.dev/v1alpha1
+    kind: TaskRun
+    metadata:
+      generateName: colorz-builder-
+    spec:
+      taskRef:
+        # kubectl apply -f https://raw.githubusercontent.com/tektoncd/catalog/master/kaniko/kaniko.yaml
+        name: kaniko
+      inputs:
+        resources:
+        - name: source
+          resourceSpec:
+            type: git
+            params:
+            - name: url
+              value: $(params.gitrepositoryurl) #https://github.com/n3wscott/colorz.git
+            - name: revsion
+              value: $(params.gitrevision) #defaults to master
+      outputs:
+        resources:
+        - name: image
+          resourceSpec:
+            type: image
+            params:
+            - name: url
+              value: $(params.registryimageurl) #gcr.io/snichols-vmw/colorz:latest
+
+---
+
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerBinding
+metadata:
+  name: colorz-binding
+spec:
+  params:
+  - name: gitrepositoryurl
+    value: $(body.repository.url)
+  - name: gitrevision
+    value: $(body.repository.revision)
+  - name: registryimageurl
+    value: $(body.registry.url)
+
+---
+
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: EventListener
+metadata:
+  name: listener
+spec:
+  serviceAccountName: colorz-trigger-sa
+  triggers:
+    - name: colorz-trig
+      bindings:
+        - ref: colorz-binding
+      template:
+        name: colorz-template
