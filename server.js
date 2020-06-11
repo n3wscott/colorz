@@ -11,7 +11,7 @@ const REVSION = process.env.K_REVISION || "unknown";
 // App
 const app = express();
 app.get('/', (req, res) => {
-  res.send(SERVICE + '@' + REVSION);
+  res.send("demooo --> " + SERVICE + '@' + REVSION);
 });
 
 app.listen(PORT, HOST);
