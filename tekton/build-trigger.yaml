@@ -71,7 +71,7 @@ spec:
             params:
             - name: url
               value: $(params.gitrepositoryurl) #https://github.com/n3wscott/colorz.git
-            - name: revsion
+            - name: revision
               value: $(params.gitrevision) #defaults to master
       outputs:
         resources:
