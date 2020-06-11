@@ -1,0 +1,13 @@
+{
+  "name": "colorz",
+  "version": "1.0.0",
+  "description": "Colorz demo",
+  "author": "Scott Nichols <n3wscott@n3wscott.com>",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.16.1"
+  }
+}
